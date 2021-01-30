@@ -3,7 +3,7 @@ import os
 import sys
 import subprocess
 
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 from setuptools.command.build_ext import build_ext
 
 # Convert distutils Windows platform specifiers to CMake -A arguments
@@ -98,11 +98,10 @@ class CMakeBuild(build_ext):
             ["cmake", "--build", "."] + build_args, cwd=self.build_temp
         )
 
-
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
-    name="cmake_example",
+    name="vovp",
     version="0.0.1",
     author="Dean Moldovan",
     author_email="dean0x7d@gmail.com",
@@ -110,5 +109,9 @@ setup(
     long_description="",
     ext_modules=[CMakeExtension("cmake_example")],
     cmdclass={"build_ext": CMakeBuild},
+    packages=find_packages("python"),
+    package_dir={
+        '': 'python',
+    },
     zip_safe=False,
 )
