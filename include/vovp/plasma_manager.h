@@ -86,6 +86,7 @@ public:
     // Copy tensor data to plasma buffer
     if (dl_tensor->ctx.device_type == kDLCPU) {
       arrow::io::FixedSizeBufferWriter writer(std::move(buffer));
+      writer.set_memcopy_threads(4);
       auto result = writer.Write(dl_tensor->data, data_size);
       check_arrow_status(result);
     } else if (dl_tensor->ctx.device_type == kDLGPU) {
