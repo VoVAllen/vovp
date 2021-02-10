@@ -62,7 +62,7 @@ DLManagedTensor *GetPlasmaBufferToDlpack(std::shared_ptr<Buffer> buffer,
                                          std::shared_ptr<Buffer> metadatabuffer,
                                          std::shared_ptr<PlasmaClient> client,
                                          ObjectID object_id) {
-  auto ptensor_ctx = new PlasmaTensorCtx(buffer, client, object_id, false);
+  auto ptensor_ctx = new PlasmaTensorCtx(buffer, client, object_id, true, false);
   void *read_ptr;
   std::vector<uint8_t> read_data;
   if (!buffer->is_cpu()) {
@@ -71,7 +71,7 @@ DLManagedTensor *GetPlasmaBufferToDlpack(std::shared_ptr<Buffer> buffer,
     auto status = reader.Read(metadatabuffer->size(), read_data.data());
     read_ptr = read_data.data();
   } else {
-    read_ptr = const_cast<uint8_t *>(buffer->data());
+    read_ptr = const_cast<uint8_t *>(metadatabuffer->data());
   }
 
   dmlc::MemoryFixedSizeStream strm_(read_ptr, metadatabuffer->size());
@@ -102,8 +102,8 @@ DLManagedTensor *GetPlasmaBufferToDlpack(std::shared_ptr<Buffer> buffer,
 
 DLManagedTensor *CreatePlasmaBufferToDlpack(
     DLManagedTensor *dlm_tensor, std::shared_ptr<Buffer> buffer,
-    std::shared_ptr<PlasmaClient> client, ObjectID object_id) {
-  auto ptensor_ctx = new PlasmaTensorCtx(buffer, client, object_id, true);
+    std::shared_ptr<PlasmaClient> client, ObjectID object_id, bool try_delete_when_destruct, bool release_when_destruct) {
+  auto ptensor_ctx = new PlasmaTensorCtx(buffer, client, object_id, release_when_destruct, try_delete_when_destruct);
   ptensor_ctx->tensor.dl_tensor.ctx = dlm_tensor->dl_tensor.ctx;
   ptensor_ctx->tensor.dl_tensor.dtype = dlm_tensor->dl_tensor.dtype;
   ptensor_ctx->tensor.dl_tensor.ndim = dlm_tensor->dl_tensor.ndim;
@@ -122,6 +122,7 @@ DLManagedTensor *CreatePlasmaBufferToDlpack(
   for (int i = ndim - 2; i >= 0; --i) {
     (*stride_arr)[i] = (*shape_arr)[i + 1] * (*stride_arr)[i + 1];
   }
+
   return &ptensor_ctx->tensor;
 };
 } // namespace vovp

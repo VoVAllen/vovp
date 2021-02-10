@@ -107,7 +107,7 @@ setup(
     author_email="dean0x7d@gmail.com",
     description="A test project using pybind11 and CMake",
     long_description="",
-    ext_modules=[CMakeExtension("cmake_example")],
+    ext_modules=[CMakeExtension("vovp")],
     cmdclass={"build_ext": CMakeBuild},
     packages=find_packages("python"),
     package_dir={

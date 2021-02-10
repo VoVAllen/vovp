@@ -42,7 +42,7 @@ typedef struct PlasmaTensorCtx {
   std::shared_ptr<PlasmaClient> plasma_client;
   // To be executed after destruction of buffer and before
   // destruction of PlasmaClient
-  // std::unique_ptr<BufferDeleter> buffer_deleter;
+  std::unique_ptr<BufferDeleter> buffer_deleter;
   std::shared_ptr<Buffer> buffer;
   ObjectID object_id;
   std::vector<int64_t> shape;
@@ -52,16 +52,21 @@ typedef struct PlasmaTensorCtx {
 
   PlasmaTensorCtx(std::shared_ptr<Buffer> buffer,
                   std::shared_ptr<PlasmaClient> plasma_client,
-                  ObjectID object_id, bool release_when_delete)
+                  ObjectID object_id, bool release_when_destruct,
+                  bool try_delete_when_destruct)
       : buffer(buffer), plasma_client(plasma_client), object_id(object_id) {
-    // buffer_deleter = std::unique_ptr<BufferDeleter>(new
-    // BufferDeleter(plasma_client, object_id));
+    if (try_delete_when_destruct) {
+      buffer_deleter = std::unique_ptr<BufferDeleter>(
+          new BufferDeleter(plasma_client, object_id));
+    }
     tensor.manager_ctx = this;
     tensor.dl_tensor.dtype.lanes = 1;
-    if (release_when_delete) {
-      tensor.deleter = &PlasmaTensorCtxNoReleaseDeleter;
-    } else {
+    if (release_when_destruct) {
+      // LOG(INFO) << "Release";
       tensor.deleter = &PlasmaTensorCtxReleaseDeleter;
+    } else {
+      // LOG(INFO) << "No Release";
+      tensor.deleter = &PlasmaTensorCtxNoReleaseDeleter;
     }
   }
 } PlasmaTensorCtx;
@@ -73,7 +78,8 @@ DLManagedTensor *GetPlasmaBufferToDlpack(std::shared_ptr<Buffer> buffer,
 
 DLManagedTensor *CreatePlasmaBufferToDlpack(
     DLManagedTensor *dlm_tensor, std::shared_ptr<Buffer> buffer,
-    std::shared_ptr<PlasmaClient> client, ObjectID object_id);
+    std::shared_ptr<PlasmaClient> client, ObjectID object_id,
+    bool try_delete_when_destruct, bool release_when_destruct);
 
 } // namespace vovp
 
