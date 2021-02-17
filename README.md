@@ -61,7 +61,7 @@ pip install .
 - Only name is needed when get the tensor (current DGL needs shape and dtype to reconstruct shared-memory tensor)
 - Support CUDA tensor (which is useful for DistGPUGraph)
 - Neat interface
-- Can support [huge pages](https://arrow.apache.org/docs/python/plasma.html?highlight=hugepages#using-plasma-with-huge-pages)
+- Support [huge pages](https://arrow.apache.org/docs/python/plasma.html?highlight=hugepages#using-plasma-with-huge-pages)
 - Multi-thread memcopy will be used when memory size > 1MB
 
 ### Cons
