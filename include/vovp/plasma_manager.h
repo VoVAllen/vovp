@@ -25,11 +25,11 @@ public:
   VovpPlasmaManager(std::string socket_name);
   // ~VovpPlasmaManager();
   DLManagedTensor *PutDlpackTensor(DLManagedTensor *dlm_tensor,
-                                     std::string& object_id, bool release_when_destruct=true,bool try_delete_when_destruct=false, bool try_delete_before_create=true);
+                                     ObjectID& object_id, bool release_when_destruct=true,bool try_delete_when_destruct=false, bool try_delete_before_create=true);
 
-  DLManagedTensor *GetDlpackTensor(std::string& object_id);
+  DLManagedTensor *GetDlpackTensor(ObjectID& object_id);
 
-  void Release(std::string& object_id);
+  void Release(ObjectID& object_id);
 
   std::shared_ptr<PlasmaClient> client;
   ObjectID tmp_object_id;

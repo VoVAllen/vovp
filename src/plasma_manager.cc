@@ -36,18 +36,18 @@ VovpPlasmaManager::VovpPlasmaManager(std::string socket_name) {
 //   *>(dlm_tensor->manager_ctx); return owner;
 // }
 
-void VovpPlasmaManager::Release(std::string &object_id) {
-  auto plasma_object_id = ToObjectID(object_id);
+void VovpPlasmaManager::Release(ObjectID &plasma_object_id) {
+  // auto plasma_object_id = ToObjectID(object_id);
   VOVP_CHECK_ARROW(client->Release(plasma_object_id));
 }
 
 DLManagedTensor *VovpPlasmaManager::PutDlpackTensor(
-    DLManagedTensor *dlm_tensor, std::string &object_id,
+    DLManagedTensor *dlm_tensor, ObjectID &plasma_object_id,
     bool release_when_destruct, bool try_delete_when_destruct,
     bool try_delete_before_create) {
   CHECK(IsContiguous(dlm_tensor));
 
-  auto plasma_object_id = ToObjectID(object_id);
+  // auto plasma_object_id = ToObjectID(object_id);
   auto dl_tensor = &(dlm_tensor->dl_tensor);
   auto ndim = dlm_tensor->dl_tensor.ndim;
   int64_t data_size = dl_tensor->dtype.bits / 8;
@@ -103,13 +103,12 @@ DLManagedTensor *VovpPlasmaManager::PutDlpackTensor(
   return plasma_dlm_tensor;
 }
 
-DLManagedTensor *VovpPlasmaManager::GetDlpackTensor(std::string &object_id) {
-  auto plasma_object_id = ToObjectID(object_id);
+DLManagedTensor *VovpPlasmaManager::GetDlpackTensor(ObjectID &plasma_object_id) {
+  // auto plasma_object_id = ToObjectID(object_id);
   std::vector<ObjectBuffer> obj_buffers;
   std::vector<ObjectID> object_ids = {plasma_object_id};
-  auto status = client->Get(object_ids, 1000, &obj_buffers);
-  check_arrow_status(status);
-  CHECK(obj_buffers[0].data) << "Unable to get tensor " << object_id;
+  VOVP_CHECK_ARROW(client->Get(object_ids, 1000, &obj_buffers));
+  CHECK(obj_buffers[0].data) << "Unable to get tensor " << plasma_object_id.hex();
   auto dlm_tensor = GetPlasmaBufferToDlpack(
       obj_buffers[0].data, obj_buffers[0].metadata, client, plasma_object_id);
   return dlm_tensor;
