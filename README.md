@@ -13,6 +13,7 @@ plasma-store-server -m 1000000000 -s "/tmp/dgl_socket"
 In one processs
 ```python
 import vovp
+import torch as th
 client = vovp.init_client("/tmp/dgl_socket")
 a = th.tensor([[1, 2, 3], [5, 4, 6]]) # a can be a CUDA tensor
 # This will ask server to create the same tensor, copy from this tensor
