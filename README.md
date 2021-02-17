@@ -54,3 +54,16 @@ git clone --recursive https://github.com/VoVAllen/vovp.gitc
 cd vovp
 pip install .
 ```
+
+## Pros and Cons comparing to current DGL solution
+### Pros
+- Clear reference counting semantic (no more worries on the lifetime management)
+- Only name is needed when get the tensor (current DGL needs shape and dtype to reconstruct shared-memory tensor)
+- Support CUDA tensor (which is useful for DistGPUGraph)
+- Neat interface
+- Can support [huge pages](https://arrow.apache.org/docs/python/plasma.html?highlight=hugepages#using-plasma-with-huge-pages)
+- Multi-thread memcopy will be used when memory size > 1MB
+
+### Cons
+- Need to start a seperate process (Can be a pros since it can live longer than DGL training process)
+- New dependency on arrow and arrow-cuda (Can be solved by static linking?)
