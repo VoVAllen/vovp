@@ -36,7 +36,7 @@ vovp.init_reduction()
 
 ## Installation
 ### Prerequesite
-Install arrow library with CUDA support`
+Install arrow library with CUDA support
 ```bash
 # Install system packages listed in https://arrow.apache.org/docs/developers/cpp/building.html if needed
 git clone https://github.com/apache/arrow.git
