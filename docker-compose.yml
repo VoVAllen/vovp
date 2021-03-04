@@ -1,0 +1,27 @@
+version: '3.5'
+
+services:
+  build_cuda:
+    build:
+      context: ./docker/
+      dockerfile: build_cuda.dockerfile
+    volumes:
+      - ./:/io:delegated
+    command:
+      - "bash"
+      - "/io/scripts/build.sh"
+    environment:
+      - ARROW_CUDA=ON
+      - VOVP_SUFFIX=_cuda
+  build_cpu:
+    build:
+      context: ./docker/
+      dockerfile: build_cpu.dockerfile
+    volumes:
+      - ./:/io:delegated
+    command:
+      - "bash"
+      - "/io/scripts/build.sh"
+    environment:
+      - ARROW_CUDA=OFF
+    # user: $UID:$GID

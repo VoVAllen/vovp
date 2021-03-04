@@ -7,8 +7,8 @@ class VovpClient:
     def __init__(self, socket_name):
         self.plasma_client = _vovp.VovpPlasmaClient(socket_name)
 
-    def put_tensor(self, object_id, tensor, release_when_destruct=True):
-        new_dlp = self.plasma_client.put_tensor(to_dlpack(tensor), object_id, release_when_destruct, False, False)
+    def put_tensor(self, object_id, tensor):
+        new_dlp = self.plasma_client.put_tensor(to_dlpack(tensor), object_id, False, True)
         return from_dlpack(new_dlp)
 
     def get_tensor(self, object_id):

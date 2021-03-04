@@ -9,18 +9,27 @@ execute_process(COMMAND python3 -c "import sys; print(sys.executable)"
 add_subdirectory(third_party/pybind11)
 add_subdirectory(third_party/dmlc-core)
 
-# set(CMAKE_BUILD_TYPE Release)
-# include(DefineArrowOptions)
-# add_subdirectory(third_party/arrow/cpp)
+find_library(PLASMA_CLIENT_PATH NAME plasma_client PATHS third_party/Plasmastore/build third_party/Plasmastore/build_docker)
+set(VOVP_ARROW_LIBS ${PLASMA_CLIENT_PATH} arrow_shared)
 
 find_package(Arrow REQUIRED)
 file(GLOB VOVP_SRC src/*.cc)
+
 pybind11_add_module(vovp MODULE ${VOVP_SRC})
 
-target_link_libraries(vovp PRIVATE arrow_shared arrow_cuda plasma)
-include_directories(third_party/dlpack/include)
-target_include_directories(vovp PRIVATE "include")
+if(VOVP_CUDA)
+target_compile_definitions(vovp PRIVATE -DVOVP_CUDA=ON)
+list(APPEND VOVP_ARROW_LIBS arrow_cuda)
+endif()
 
+target_link_libraries(vovp PRIVATE ${VOVP_ARROW_LIBS})
+include_directories(third_party/dlpack/include)
+include_directories(third_party/dmlc-core/include)
+include_directories(third_party/Plasmastore/include)
+
+set_target_properties(vovp PROPERTIES LINK_FLAGS "-Wl,-rpath,\\$ORIGIN/ -Wl,-rpath,\\$ORIGIN/vovp_lib/")
+target_include_directories(vovp PRIVATE "include")
+target_include_directories(vovp PRIVATE "third_party/dlpack/include")
 # EXAMPLE_VERSION_INFO is defined by setup.py and passed into the C++ code as a
 # define (VERSION_INFO) here.
 set_target_properties(vovp PROPERTIES OUTPUT_NAME "_vovp")

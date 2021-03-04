@@ -3,11 +3,17 @@
 #include <dmlc/memory_io.h>
 #include <vovp/ndarray_utils.h>
 
-#include <arrow/gpu/cuda_memory.h>
 #include <plasma/client.h>
 #include <plasma/common.h>
+
+#ifdef VOVP_CUDA
+#include <arrow/gpu/cuda_memory.h>
+#endif
+
 namespace vovp {
+#ifdef VOVP_CUDA
 using arrow::cuda::CudaBuffer;
+#endif
 
 bool IsContiguous(DLManagedTensor *data_) {
   CHECK(data_ != nullptr);
@@ -29,13 +35,13 @@ bool IsContiguous(DLManagedTensor *data_) {
 
 void PlasmaTensorCtxNoReleaseDeleter(DLManagedTensor *arg) {
   PlasmaTensorCtx *owner = static_cast<PlasmaTensorCtx *>(arg->manager_ctx);
-  auto status = owner->plasma_client->Release(owner->object_id);
-  VOVP_CHECK_ARROW(status);
   delete owner;
 }
 
 void PlasmaTensorCtxReleaseDeleter(DLManagedTensor *arg) {
   PlasmaTensorCtx *owner = static_cast<PlasmaTensorCtx *>(arg->manager_ctx);
+  auto status = owner->plasma_client->Release(owner->object_id);
+  VOVP_CHECK_ARROW(status);
   delete owner;
 }
 
@@ -44,6 +50,8 @@ void *GetPointerFromBuffer(std::shared_ptr<Buffer> buffer,
   if (device == kDLCPU) {
     return reinterpret_cast<void *>(buffer->address());
   } else if (device == kDLGPU) {
+
+#ifdef VOVP_CUDA
     auto result = CudaBuffer::FromBuffer(buffer);
     if (result.ok()) {
       auto gpu_buffer = result.ValueOrDie();
@@ -52,6 +60,9 @@ void *GetPointerFromBuffer(std::shared_ptr<Buffer> buffer,
       LOG(FATAL) << "Invalid buffer";
       return nullptr;
     }
+#else
+    LOG(FATAL) << "Unsupport CUDA operation";
+#endif
   } else {
     LOG(FATAL) << "Invalid device";
     return nullptr;
@@ -62,14 +73,19 @@ DLManagedTensor *GetPlasmaBufferToDlpack(std::shared_ptr<Buffer> buffer,
                                          std::shared_ptr<Buffer> metadatabuffer,
                                          std::shared_ptr<PlasmaClient> client,
                                          ObjectID object_id) {
-  auto ptensor_ctx = new PlasmaTensorCtx(buffer, client, object_id, true, false);
+  auto ptensor_ctx =
+      new PlasmaTensorCtx(buffer, client, object_id, false, true);
   void *read_ptr;
   std::vector<uint8_t> read_data;
   if (!buffer->is_cpu()) {
+#ifdef VOVP_CUDA
     arrow::cuda::CudaBufferReader reader(metadatabuffer);
     read_data.resize(metadatabuffer->size());
     auto status = reader.Read(metadatabuffer->size(), read_data.data());
     read_ptr = read_data.data();
+#else
+    LOG(FATAL) << "Unsupport CUDA operation";
+#endif
   } else {
     read_ptr = const_cast<uint8_t *>(metadatabuffer->data());
   }
@@ -102,8 +118,11 @@ DLManagedTensor *GetPlasmaBufferToDlpack(std::shared_ptr<Buffer> buffer,
 
 DLManagedTensor *CreatePlasmaBufferToDlpack(
     DLManagedTensor *dlm_tensor, std::shared_ptr<Buffer> buffer,
-    std::shared_ptr<PlasmaClient> client, ObjectID object_id, bool try_delete_when_destruct, bool release_when_destruct) {
-  auto ptensor_ctx = new PlasmaTensorCtx(buffer, client, object_id, release_when_destruct, try_delete_when_destruct);
+    std::shared_ptr<PlasmaClient> client, ObjectID object_id,
+    bool try_delete_when_destruct) {
+  auto ptensor_ctx =
+      new PlasmaTensorCtx(buffer, client, object_id, true,
+                          try_delete_when_destruct);
   ptensor_ctx->tensor.dl_tensor.ctx = dlm_tensor->dl_tensor.ctx;
   ptensor_ctx->tensor.dl_tensor.dtype = dlm_tensor->dl_tensor.dtype;
   ptensor_ctx->tensor.dl_tensor.ndim = dlm_tensor->dl_tensor.ndim;

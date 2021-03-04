@@ -5,3 +5,6 @@ compile_commands.json
 *.pyc
 python/vovp.egg-info
 .gdb_history
+build_docker
+*.egg-info/
+dist/

@@ -12,7 +12,7 @@ def test_basic_client():
     assert th.equal(ret_a, ret_b)
     ret_a[0][0] = 999
     assert th.equal(ret_a, ret_b)
-    # del ret_b
+    del ret_b, ret_c, ret_a, a
     client.list()
 
 

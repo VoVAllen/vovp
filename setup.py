@@ -3,8 +3,12 @@ import os
 import sys
 import subprocess
 
-from setuptools import setup, Extension, find_packages
+from setuptools import setup, Extension, find_packages, Distribution
 from setuptools.command.build_ext import build_ext
+
+from pathlib import Path
+
+from setuptools.extension import Library
 
 # Convert distutils Windows platform specifiers to CMake -A arguments
 PLAT_TO_CMAKE = {
@@ -14,6 +18,10 @@ PLAT_TO_CMAKE = {
     "win-arm64": "ARM64",
 }
 
+
+class BinaryDistribution(Distribution):
+    def has_ext_modules(foo):
+        return True
 
 # A CMakeExtension needs a sourcedir instead of a file list.
 # The name must be the _single_ output extension from the CMake build.
@@ -26,7 +34,10 @@ class CMakeExtension(Extension):
 
 class CMakeBuild(build_ext):
     def build_extension(self, ext):
-        extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
+        if not isinstance(ext, CMakeExtension):
+            return
+        extdir = os.path.abspath(os.path.dirname(
+            self.get_ext_fullpath(ext.name)))
 
         # required for auto-detection of auxiliary "native" libs
         if not extdir.endswith(os.path.sep):
@@ -44,8 +55,10 @@ class CMakeBuild(build_ext):
         cmake_args = [
             "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={}".format(extdir),
             "-DPYTHON_EXECUTABLE={}".format(sys.executable),
-            "-DEXAMPLE_VERSION_INFO={}".format(self.distribution.get_version()),
-            "-DCMAKE_BUILD_TYPE={}".format(cfg),  # not used on MSVC, but no harm
+            "-DEXAMPLE_VERSION_INFO={}".format(
+                self.distribution.get_version()),
+            # not used on MSVC, but no harm
+            "-DCMAKE_BUILD_TYPE={}".format(cfg),
         ]
         build_args = []
 
@@ -61,7 +74,8 @@ class CMakeBuild(build_ext):
         else:
 
             # Single config generators are handled "normally"
-            single_config = any(x in cmake_generator for x in {"NMake", "Ninja"})
+            single_config = any(
+                x in cmake_generator for x in {"NMake", "Ninja"})
 
             # CMake allows an arch-in-generator style for backward compatibility
             contains_arch = any(x in cmake_generator for x in {"ARM", "Win64"})
@@ -75,7 +89,8 @@ class CMakeBuild(build_ext):
             # Multi-config generators have a different way to specify configs
             if not single_config:
                 cmake_args += [
-                    "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}".format(cfg.upper(), extdir)
+                    "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}".format(
+                        cfg.upper(), extdir)
                 ]
                 build_args += ["--config", cfg]
 
@@ -100,18 +115,26 @@ class CMakeBuild(build_ext):
 
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
+
+package_suffix = os.getenv("VOVP_SUFFIX", "")
+print(package_suffix)
 setup(
-    name="vovp",
-    version="0.0.1",
-    author="Dean Moldovan",
-    author_email="dean0x7d@gmail.com",
-    description="A test project using pybind11 and CMake",
+    name="vovp"+package_suffix,
+    version="0.0.2",
+    author="Allen Zhou",
+    author_email="",
+    description="KVStore for tensors",
     long_description="",
     ext_modules=[CMakeExtension("vovp")],
     cmdclass={"build_ext": CMakeBuild},
-    packages=find_packages("python"),
+    # py_modules=['python/vovp'],
+    packages=['vovp', 'vovp_lib'],
     package_dir={
-        '': 'python',
+        'vovp': 'python/vovp',
+        'vovp_lib': 'build_docker'
+    },
+    package_data={
+        'vovp_lib': ["libplasma_client.so", "libarrow.so.300", "plasma-store-server", "libarrow_cuda.so.300",]
     },
     zip_safe=False,
 )

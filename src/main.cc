@@ -1,3 +1,4 @@
+#include "dlpack/dlpack.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
 #include <vovp/plasma_manager.h>
@@ -32,13 +33,13 @@ PYBIND11_MODULE(_vovp, m) {
       .def(py::init<const std::string &>())
       .def("put_tensor",
            [](vovp::VovpPlasmaManager &manager, const py::capsule &pycapsule,
-              py::bytes object_id, bool release_when_destruct,
+              std::string object_id, 
               bool try_delete_when_destruct, bool try_delete_before_create) {
              auto *dlm_ptr =
                  reinterpret_cast<DLManagedTensor *>(pycapsule.get_pointer());
              ObjectID plasma_object_id = ToObjectID(object_id);
              DLManagedTensor *new_dlm_ptr = manager.PutDlpackTensor(
-                 dlm_ptr, plasma_object_id, release_when_destruct,
+                 dlm_ptr, plasma_object_id, 
                  try_delete_when_destruct, try_delete_before_create);
 
              PyCapsule_SetName(pycapsule.ptr(), "used_dltensor");
@@ -52,10 +53,30 @@ PYBIND11_MODULE(_vovp, m) {
            })
       .def("get_tensor",
            [](vovp::VovpPlasmaManager &manager, std::string object_id) {
-             
              ObjectID plasma_object_id = ToObjectID(object_id);
              auto *dlm_ptr = manager.GetDlpackTensor(plasma_object_id);
-             
+
+             py::capsule new_capsule(dlm_ptr, "dltensor",
+                                     &DlpackCapsuleDestructor);
+             return new_capsule;
+           })
+      .def("create_tensor",
+           [](vovp::VovpPlasmaManager &manager, std::string object_id,
+              std::vector<int64_t> shape, uint8_t dtype_code,
+              uint8_t dtype_bits, std::string device_str, int device_id) {
+             DLDataType dtype = {
+                 .code = dtype_code, .bits = dtype_bits, .lanes = 1};
+             DLContext ctx;
+             if (device_str == "cpu") {
+               ctx = {.device_type = kDLCPU, .device_id = 0};
+             } else if (device_str == "cuda" or device_str == "gpu") {
+               ctx = {.device_type = kDLGPU, .device_id = device_id};
+             }
+
+             ObjectID plasma_object_id = ToObjectID(object_id);
+             auto *dlm_ptr = manager.CreateTensor(
+                 plasma_object_id, shape.data(), shape.size(), dtype, ctx);
+
              py::capsule new_capsule(dlm_ptr, "dltensor",
                                      &DlpackCapsuleDestructor);
              return new_capsule;
@@ -71,7 +92,7 @@ PYBIND11_MODULE(_vovp, m) {
              }
            })
       .def("release",
-           [](vovp::VovpPlasmaManager &manager, std::string object_id) {             
+           [](vovp::VovpPlasmaManager &manager, std::string object_id) {
              ObjectID plasma_object_id = ToObjectID(object_id);
              manager.Release(plasma_object_id);
            });
